@@ -7,12 +7,17 @@ package com.mb.solrj;
 import java.io.*;
 import java.util.*;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
+import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 
 /**
@@ -92,6 +97,32 @@ public class APISolrj {
             System.out.println("Error en Scanner.");
         }
         System.out.println("Documentos indexados en " + collection + ".");
+    }
+
+    public static void consultar(String collection, String words) {
+
+        //Preparing the Solr client
+        String urlString = "http://localhost:8983/solr/" + collection;
+        SolrClient client = new HttpSolrClient.Builder(urlString).build();
+        
+        final SolrQuery query = new SolrQuery();
+        QueryResponse rsp = new QueryResponse();
+        SolrDocumentList docs = new SolrDocumentList();
+        try {
+            query.setQuery(words);
+            //query.setQuery("Apple");
+            //query.addFilterQuery("cat:electronics");
+            //query.setFields("id","price","merchant","cat","store");
+            rsp = client.query(query);
+            docs = rsp.getResults();
+            for (int i = 0; i < docs.size(); ++i) {
+                System.out.println(docs.get(i));
+            }
+        } catch (SolrServerException ex) {
+            System.out.println("Error en Solrj.");
+        } catch (IOException ex) {
+            System.out.println("Error en Scanner.");
+        }
     }
 
     public static void borrarTodo(String collection) {

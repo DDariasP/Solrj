@@ -6,6 +6,7 @@
 package com.mb.solrj;
 
 import static com.mb.solrj.APISolrj.borrarTodo;
+import static com.mb.solrj.APISolrj.consultar;
 import static com.mb.solrj.APISolrj.indexarCISI;
 
 /**
@@ -18,7 +19,7 @@ public class Solrj {
         String archivo = ".\\collection\\CISI";
         String colecion = "pruebas";
 
-        borrarTodo(colecion);
-        indexarCISI(archivo, colecion);
+        consultar(colecion,"*:*");
+
     }
 }
