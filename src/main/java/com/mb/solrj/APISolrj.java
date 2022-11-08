@@ -97,7 +97,7 @@ public class APISolrj {
         System.out.println("\nDocumentos indexados en " + collection + ".\n");
     }
 
-    public static Queue<String> indexarQRY(String filename) {
+    public static Queue<String> parsearQRY(String filename) {
 
         Queue<String> docs = new LinkedList<>();
         Queue<String> words = new LinkedList<>();

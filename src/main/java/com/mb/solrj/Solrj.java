@@ -7,8 +7,8 @@ package com.mb.solrj;
 import static com.mb.solrj.APISolrj.borrarTodo;
 import static com.mb.solrj.APISolrj.consultar;
 import static com.mb.solrj.APISolrj.indexarCISI;
-import static com.mb.solrj.APISolrj.indexarQRY;
 import java.util.Queue;
+import static com.mb.solrj.APISolrj.parsearQRY;
 
 /**
  *
@@ -20,7 +20,7 @@ public class Solrj {
         String archivo = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
 
-        Queue<String> consultas = indexarQRY(archivo);
+        Queue<String> consultas = parsearQRY(archivo);
         consultar(coleccion,consultas);
 
     }
