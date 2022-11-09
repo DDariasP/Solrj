@@ -6,9 +6,11 @@ package com.mb.solrj;
 
 import static com.mb.solrj.APISolrj.borrarTodo;
 import static com.mb.solrj.APISolrj.consultar;
+import static com.mb.solrj.APISolrj.crearTREC;
 import static com.mb.solrj.APISolrj.indexarCISI;
 import java.util.Queue;
 import static com.mb.solrj.APISolrj.parsearQRY;
+import org.apache.solr.common.SolrDocumentList;
 
 /**
  *
@@ -19,9 +21,11 @@ public class Solrj {
     public static void main(String[] args) {
         String archivo = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
+        SolrDocumentList[] lista;
 
         Queue<String> consultas = parsearQRY(archivo);
-        consultar(coleccion,consultas);
+        lista = consultar(coleccion, consultas);
+        crearTREC(lista);
 
     }
 }

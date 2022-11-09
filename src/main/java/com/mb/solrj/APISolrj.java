@@ -94,7 +94,7 @@ public class APISolrj {
         } catch (IOException ex) {
             System.out.println("Error en Scanner.");
         }
-        System.out.println("\nDocumentos indexados en " + collection + ".\n");
+        System.out.println("\nDocumentos de " + filename + " indexados en " + collection + ".\n");
     }
 
     public static Queue<String> parsearQRY(String filename) {
@@ -106,6 +106,7 @@ public class APISolrj {
         String total = "";
         Pattern pattern;
         Matcher matcher;
+        int limit;
         try {
             Scanner scan = new Scanner(new File(filename));
             boolean found = false;
@@ -118,8 +119,10 @@ public class APISolrj {
                     } else {
                         total = total + ".X";
                     }
-                    if (".I 58".equals(line)) {
+                    //if (".I 112".equals(line)) {
+                    if (!scan.hasNextLine()) {
                         found = true;
+                        total = total + ".X";
                     }
                 }
             }
@@ -134,20 +137,29 @@ public class APISolrj {
                 line = docs.remove();
                 tokens = line.split("\\s+");
                 if (tokens.length > 5) {
-                    for (int i = 0; i < 5; i++) {
+                    limit = 5;
+                } else {
+                    limit = tokens.length;
+                }
+                if (tokens.length > 0) {
+                    for (int i = 0; i < limit; i++) {
                         field = field + " " + tokens[i];
                     }
+                    field = field.replaceAll("[\\(\\)\\,\\.\\;\\:\\'\"\\?\\!\\']", "");
                     words.add(field);
+                    System.out.println(field);
                 }
             }
         } catch (IOException ex) {
             System.out.println("Error en Scanner.");
         }
-        System.out.println("\nConsultas de " + filename + " indexadas.\n");
+
+        System.out.println(
+                "\nConsultas de " + filename + " parseadas.\n");
         return words;
     }
 
-    public static void consultar(String collection, Queue<String> words) {
+    public static SolrDocumentList[] consultar(String collection, Queue<String> words) {
 
         //Preparing the Solr client
         String urlString = "http://localhost:8983/solr/" + collection;
@@ -156,28 +168,69 @@ public class APISolrj {
         final SolrQuery query = new SolrQuery();
         QueryResponse rsp = new QueryResponse();
         SolrDocumentList docs = new SolrDocumentList();
+        SolrDocumentList[] list = new SolrDocumentList[words.size() + 1];
         String line;
+        int numquery;
 
-        System.out.println("\nResultados de las consultas en " + collection + ":");
-
+        //System.out.println("\nResultados de las consultas en " + collection + ":");
         try {
+            numquery = 0;
             while (!words.isEmpty()) {
+                numquery++;
                 line = words.remove();
-                System.out.println("\n" + line);
+                //System.out.println("\n" + "Consulta: " + numquery);
+                //System.out.println(line);
                 query.setQuery("text:" + line);
                 //query.setQuery("Apple");
                 //query.addFilterQuery("cat:electronics");
-                query.setFields("ndoc","author","score");
+                query.setRows(10);
+                query.setFields("ndoc", "score");
                 rsp = client.query(query);
                 docs = rsp.getResults();
-                for (int i = 0; i < docs.size(); ++i) {
-                    System.out.println(docs.get(i));
-                }
+                list[numquery] = docs;
+                //for (int i = 0; i < docs.size(); ++i) {
+                //  System.out.println(docs.get(i));
+                //}
             }
         } catch (SolrServerException ex) {
             System.out.println("Error en Solrj.");
         } catch (IOException ex) {
             System.out.println("Error en Scanner.");
+        }
+        System.out.println("\nConsultas en " + collection + " realizadas.\n");
+        return list;
+    }
+
+    public static void crearTREC(SolrDocumentList[] list) {
+        String nqry, ndoc, rank, score, line;
+
+        try {
+            File trec = new File("trec_solr_file");
+            if (trec.exists()) {
+                trec.delete();
+                System.out.println("\nArchivo " + trec.getName() + " sobreescrito.\n");
+            } else {
+                System.out.println("\nArchivo " + trec.getName() + " creado.\n");
+            }
+            trec.createNewFile();
+
+            FileWriter writer = new FileWriter("trec_solr_file");
+            for (int i = 1; i < list.length; i++) {
+                nqry = String.format("%3d", i);
+                for (int j = 0; j < list[i].size(); j++) {
+                    ndoc = String.valueOf(list[i].get(j).getFieldValue("ndoc"));
+                    ndoc = ndoc.replaceAll("[\\[\\]]", "");
+                    ndoc = String.format("%4s", ndoc);
+                    rank = String.format("%2d", j + 1);
+                    score = String.valueOf(list[i].get(j).getFieldValue("score"));
+                    score = score.substring(0, 8);
+                    line = nqry + " Q0 " + ndoc + " " + rank + " " + score + " DDP\n";
+                    writer.write(line);
+                }
+            }
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("Error en File.");
         }
     }
 
