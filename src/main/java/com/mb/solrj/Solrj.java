@@ -19,11 +19,14 @@ import org.apache.solr.common.SolrDocumentList;
 public class Solrj {
 
     public static void main(String[] args) {
-        String archivo = ".\\collection\\CISI.QRY";
+        String archivo1 = ".\\collection\\CISI.ALL";
+        String archivo2 = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
         SolrDocumentList[] lista;
 
-        Queue<String> consultas = parsearQRY(archivo);
+        //borrarTodo(coleccion);
+        //indexarCISI(archivo1,coleccion);
+        Queue<String> consultas = parsearQRY(archivo2);
         lista = consultar(coleccion, consultas);
         crearTREC(lista);
 

@@ -119,8 +119,8 @@ public class APISolrj {
                     } else {
                         total = total + ".X";
                     }
-                    //if (".I 112".equals(line)) {
-                    if (!scan.hasNextLine()) {
+                    if (".I 112".equals(line)) {
+                        //if (!scan.hasNextLine()) {
                         found = true;
                         total = total + ".X";
                     }
@@ -132,22 +132,26 @@ public class APISolrj {
                 field = matcher.group(2).trim();
                 docs.add(field);
             }
+            int count = 0;
             while (!docs.isEmpty()) {
+                count++;
                 field = "";
                 line = docs.remove();
                 tokens = line.split("\\s+");
+                /*
                 if (tokens.length > 5) {
                     limit = 5;
                 } else {
                     limit = tokens.length;
-                }
+                }*/
+                limit = tokens.length;
                 if (tokens.length > 0) {
                     for (int i = 0; i < limit; i++) {
                         field = field + " " + tokens[i];
                     }
                     field = field.replaceAll("[\\(\\)\\,\\.\\;\\:\\'\"\\?\\!\\']", "");
                     words.add(field);
-                    System.out.println(field);
+                    //System.out.println(count + ": " + field);
                 }
             }
         } catch (IOException ex) {
@@ -178,8 +182,8 @@ public class APISolrj {
             while (!words.isEmpty()) {
                 numquery++;
                 line = words.remove();
-                //System.out.println("\n" + "Consulta: " + numquery);
-                //System.out.println(line);
+                System.out.println("\n" + "Consulta: " + numquery);
+                System.out.println(line);
                 query.setQuery("text:" + line);
                 //query.setQuery("Apple");
                 //query.addFilterQuery("cat:electronics");
@@ -188,9 +192,9 @@ public class APISolrj {
                 rsp = client.query(query);
                 docs = rsp.getResults();
                 list[numquery] = docs;
-                //for (int i = 0; i < docs.size(); ++i) {
-                //  System.out.println(docs.get(i));
-                //}
+                for (int i = 0; i < docs.size(); ++i) {
+                    System.out.println(docs.get(i));
+                }
             }
         } catch (SolrServerException ex) {
             System.out.println("Error en Solrj.");
@@ -203,6 +207,7 @@ public class APISolrj {
 
     public static void crearTREC(SolrDocumentList[] list) {
         String nqry, ndoc, rank, score, line;
+        int limit = 0;
 
         try {
             File trec = new File("trec_solr_file");
@@ -223,7 +228,12 @@ public class APISolrj {
                     ndoc = String.format("%4s", ndoc);
                     rank = String.format("%2d", j + 1);
                     score = String.valueOf(list[i].get(j).getFieldValue("score"));
-                    score = score.substring(0, 8);
+                    if (score.length() < 8) {
+                        limit = score.length();
+                    } else {
+                        limit = 8;
+                    }
+                    score = score.substring(0, limit);
                     line = nqry + " Q0 " + ndoc + " " + rank + " " + score + " DDP\n";
                     writer.write(line);
                 }
