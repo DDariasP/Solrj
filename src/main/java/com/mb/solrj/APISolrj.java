@@ -39,6 +39,7 @@ public class APISolrj {
         String total = "";
         Pattern pattern;
         Matcher matcher;
+        int ndoc = 0;
         try {
             Scanner scan = new Scanner(new File(filename));
             while (scan.hasNextLine()) {
@@ -86,7 +87,10 @@ public class APISolrj {
                 final UpdateResponse updateResponse = client.add(collection, doc);
                 // Indexed documents must be committed
                 client.commit(collection);
-                //System.out.println("Documento " + ndoc + " indexado en " + collection + ".");
+                ndoc++;
+                if (ndoc % 100 == 0) {
+                    System.out.println("Documento " + ndoc + " indexado en " + collection + ".");
+                }
                 doc.clear();
             }
         } catch (SolrServerException ex) {
@@ -138,18 +142,20 @@ public class APISolrj {
                 field = "";
                 line = docs.remove();
                 tokens = line.split("\\s+");
-                /*
-                if (tokens.length > 5) {
-                    limit = 5;
+
+                /*if (tokens.length > 15) {
+                    limit = 15;
                 } else {
                     limit = tokens.length;
                 }*/
                 limit = tokens.length;
-                if (tokens.length > 0) {
-                    for (int i = 0; i < limit; i++) {
-                        field = field + " " + tokens[i];
+                if (tokens.length > 1) {
+                    field = tokens[0].toLowerCase();
+                    for (int i = 1; i < limit; i++) {
+                        field = field + "||" + tokens[i].toLowerCase();
                     }
-                    field = field.replaceAll("[\\(\\)\\,\\.\\;\\:\\'\"\\?\\!\\']", "");
+                    field = field.replaceAll("[\\+\\-\\&&\\!\\(\\)\\{\\}\\[\\]\\^\"\\~\\*\\?\\:\\/\\,\\.\\:\\;]", "");
+                    //field = entidadesQRY(field);
                     words.add(field);
                     //System.out.println(count + ": " + field);
                 }
@@ -161,6 +167,56 @@ public class APISolrj {
         System.out.println(
                 "\nConsultas de " + filename + " parseadas.\n");
         return words;
+    }
+
+    public static String entidadesQRY(String line) {
+
+        Pattern pattern;
+        Matcher matcher;
+        Map<String, Integer> dic = new HashMap<String, Integer>();
+        dic.put("information", 2);
+        dic.put("retrieval", 4);
+        dic.put("storage", 4);
+        dic.put("consolidation", 4);
+        dic.put("evaluation", 4);
+        dic.put("automation", 4);
+        dic.put("mechanization", 4);
+        dic.put("translation", 4);
+        dic.put("indexing", 4);
+        dic.put("dissemination", 4);
+        dic.put("training", 4);
+        dic.put("cost", 4);
+        dic.put("exchange", 4);
+        dic.put("requests", 4);
+        dic.put("language", 4);
+        dic.put("articles", 2);
+        dic.put("titles", 4);
+        dic.put("agency", 2);
+        dic.put("center", 2);
+        dic.put("researchers", 2);
+        dic.put("students", 2);
+        dic.put("automated", 4);
+        dic.put("medical", 4);
+        dic.put("clinical", 4);
+        dic.put("natural", 4);
+        dic.put("social", 4);
+        dic.put("chemical", 4);
+        dic.put("alphabetical", 4);
+
+        String word;
+        int weight;
+        Iterator<Map.Entry<String, Integer>> it = dic.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Integer> pair = it.next();
+            word = pair.getKey();
+            weight = pair.getValue();
+            pattern = Pattern.compile(word);
+            matcher = pattern.matcher(line);
+            while (matcher.find()) {
+                line = matcher.replaceAll(word + "^" + weight);
+            }
+        }
+        return line;
     }
 
     public static SolrDocumentList[] consultar(String collection, Queue<String> words) {
@@ -187,7 +243,7 @@ public class APISolrj {
                 query.setQuery("text:" + line);
                 //query.setQuery("Apple");
                 //query.addFilterQuery("cat:electronics");
-                query.setRows(10);
+                query.setRows(40);
                 query.setFields("ndoc", "score");
                 rsp = client.query(query);
                 docs = rsp.getResults();
@@ -234,6 +290,7 @@ public class APISolrj {
                         limit = 8;
                     }
                     score = score.substring(0, limit);
+                    score = String.format("%-8s", score);
                     line = nqry + " Q0 " + ndoc + " " + rank + " " + score + " DDP\n";
                     writer.write(line);
                 }

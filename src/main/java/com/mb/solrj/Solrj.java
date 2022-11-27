@@ -11,6 +11,8 @@ import static com.mb.solrj.APISolrj.indexarCISI;
 import java.util.Queue;
 import static com.mb.solrj.APISolrj.parsearQRY;
 import org.apache.solr.common.SolrDocumentList;
+import java.io.*;
+import java.util.*;
 
 /**
  *
@@ -23,7 +25,12 @@ public class Solrj {
         String archivo2 = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
         SolrDocumentList[] lista;
-
+        
+        /*Queue<String> stopwords = new LinkedList<>();
+        stopwords.add("of the from are is");
+        stopwords.add("it no such that");
+        consultar(coleccion, stopwords);*/
+        
         //borrarTodo(coleccion);
         //indexarCISI(archivo1,coleccion);
         Queue<String> consultas = parsearQRY(archivo2);
