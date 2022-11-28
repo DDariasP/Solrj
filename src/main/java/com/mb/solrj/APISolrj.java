@@ -143,12 +143,12 @@ public class APISolrj {
                 line = docs.remove();
                 tokens = line.split("\\s+");
 
-                /*if (tokens.length > 15) {
-                    limit = 15;
+                if (tokens.length > 110) {
+                    limit = 110; //numero optimo de palabras por consulta
                 } else {
                     limit = tokens.length;
-                }*/
-                limit = tokens.length;
+                }
+                //limit = tokens.length;
                 if (tokens.length > 1) {
                     field = tokens[0].toLowerCase();
                     for (int i = 1; i < limit; i++) {
@@ -173,41 +173,41 @@ public class APISolrj {
 
         Pattern pattern;
         Matcher matcher;
-        Map<String, Integer> dic = new HashMap<String, Integer>();
-        dic.put("information", 2);
-        dic.put("retrieval", 4);
-        dic.put("storage", 4);
-        dic.put("consolidation", 4);
-        dic.put("evaluation", 4);
-        dic.put("automation", 4);
-        dic.put("mechanization", 4);
-        dic.put("translation", 4);
-        dic.put("indexing", 4);
-        dic.put("dissemination", 4);
-        dic.put("training", 4);
-        dic.put("cost", 4);
-        dic.put("exchange", 4);
-        dic.put("requests", 4);
-        dic.put("language", 4);
-        dic.put("articles", 2);
-        dic.put("titles", 4);
-        dic.put("agency", 2);
-        dic.put("center", 2);
-        dic.put("researchers", 2);
-        dic.put("students", 2);
-        dic.put("automated", 4);
-        dic.put("medical", 4);
-        dic.put("clinical", 4);
-        dic.put("natural", 4);
-        dic.put("social", 4);
-        dic.put("chemical", 4);
-        dic.put("alphabetical", 4);
+        Map<String, Double> dic = new HashMap<String, Double>();
+        dic.put("information", 0.1);
+        dic.put("library", 0.1);
+        dic.put("libraries", 0.1);
+        dic.put("system", 0.1);
+        dic.put("develop", 0.1);
+        dic.put("development", 0.1);
+        dic.put("study", 0.1);
+        dic.put("studies", 0.1);
+        dic.put("research", 0.1);
+        dic.put("researcher", 0.1);
+        dic.put("researchers", 0.1);
+        dic.put("data", 0.1);
+        dic.put("some", 0.1);
+        dic.put("book", 0.1);
+        dic.put("result", 0.1);
+        dic.put("other", 0.1);
+        dic.put("problem", 0.1);
+        dic.put("problems", 0.1);
+        dic.put("center", 0.1);
+        dic.put("paper", 0.1);
+        dic.put("papers", 0.1);
+        dic.put("base", 0.1);
+        dic.put("based", 0.1);
+        dic.put("describe", 0.1);
+        dic.put("retrieval", 0.1);
+        dic.put("work", 0.1);
+        dic.put("index", 0.1);
+        dic.put("indexing", 0.1);
 
         String word;
-        int weight;
-        Iterator<Map.Entry<String, Integer>> it = dic.entrySet().iterator();
+        double weight;
+        Iterator<Map.Entry<String, Double>> it = dic.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<String, Integer> pair = it.next();
+            Map.Entry<String, Double> pair = it.next();
             word = pair.getKey();
             weight = pair.getValue();
             pattern = Pattern.compile(word);
@@ -230,11 +230,11 @@ public class APISolrj {
         SolrDocumentList docs = new SolrDocumentList();
         SolrDocumentList[] list = new SolrDocumentList[words.size() + 1];
         String line;
-        int numquery;
-
+        int numquery, numempty;
+        numquery = 0;
+        numempty = 0;
         //System.out.println("\nResultados de las consultas en " + collection + ":");
         try {
-            numquery = 0;
             while (!words.isEmpty()) {
                 numquery++;
                 line = words.remove();
@@ -243,11 +243,14 @@ public class APISolrj {
                 query.setQuery("text:" + line);
                 //query.setQuery("Apple");
                 //query.addFilterQuery("cat:electronics");
-                query.setRows(40);
+                query.setRows(100); //numero optimo de docs por consulta
                 query.setFields("ndoc", "score");
                 rsp = client.query(query);
                 docs = rsp.getResults();
                 list[numquery] = docs;
+                if (list[numquery].isEmpty()) {
+                    numempty++;
+                }
                 for (int i = 0; i < docs.size(); ++i) {
                     System.out.println(docs.get(i));
                 }
@@ -257,7 +260,8 @@ public class APISolrj {
         } catch (IOException ex) {
             System.out.println("Error en Scanner.");
         }
-        System.out.println("\nConsultas en " + collection + " realizadas.\n");
+        System.out.println("\n" + numquery + " consultas en " + collection + " realizadas.");
+        System.out.println("\n" + numempty + " consultas sin resultados.");
         return list;
     }
 
@@ -279,20 +283,22 @@ public class APISolrj {
             for (int i = 1; i < list.length; i++) {
                 nqry = String.format("%3d", i);
                 for (int j = 0; j < list[i].size(); j++) {
-                    ndoc = String.valueOf(list[i].get(j).getFieldValue("ndoc"));
-                    ndoc = ndoc.replaceAll("[\\[\\]]", "");
-                    ndoc = String.format("%4s", ndoc);
-                    rank = String.format("%2d", j + 1);
                     score = String.valueOf(list[i].get(j).getFieldValue("score"));
-                    if (score.length() < 8) {
-                        limit = score.length();
-                    } else {
-                        limit = 8;
+                    if (Double.valueOf(score) > 1.6) { //score minimo aceptado
+                        if (score.length() < 8) {
+                            limit = score.length();
+                        } else {
+                            limit = 8;
+                        }
+                        score = score.substring(0, limit);
+                        score = String.format("%-8s", score);
+                        ndoc = String.valueOf(list[i].get(j).getFieldValue("ndoc"));
+                        ndoc = ndoc.replaceAll("[\\[\\]]", "");
+                        ndoc = String.format("%4s", ndoc);
+                        rank = String.format("%2d", j + 1);
+                        line = nqry + " Q0 " + ndoc + " " + rank + " " + score + " DDP\n";
+                        writer.write(line);
                     }
-                    score = score.substring(0, limit);
-                    score = String.format("%-8s", score);
-                    line = nqry + " Q0 " + ndoc + " " + rank + " " + score + " DDP\n";
-                    writer.write(line);
                 }
             }
             writer.close();
