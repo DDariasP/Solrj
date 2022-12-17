@@ -10,9 +10,12 @@ import static com.mb.solrj.APISolrj.crearTREC;
 import static com.mb.solrj.APISolrj.indexarCISI;
 import java.util.Queue;
 import static com.mb.solrj.APISolrj.parsearQRY;
+import gate.util.GateException;
 import org.apache.solr.common.SolrDocumentList;
 import java.io.*;
+import java.net.URISyntaxException;
 import java.util.*;
+import static com.mb.solrj.APISolrj.parsearAnnie;
 
 /**
  *
@@ -20,7 +23,7 @@ import java.util.*;
  */
 public class Solrj {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws GateException, IOException, URISyntaxException {
         String archivo1 = ".\\collection\\CISI.ALL";
         String archivo2 = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
@@ -33,9 +36,10 @@ public class Solrj {
         
         //borrarTodo(coleccion);
         //indexarCISI(archivo1,coleccion);
-        Queue<String> consultas = parsearQRY(archivo2);
-        lista = consultar(coleccion, consultas);
-        crearTREC(lista);
+        parsearAnnie(archivo1,coleccion);
+        //Queue<String> consultas = parsearQRY(archivo2);
+        //lista = consultar(coleccion, consultas);
+        //crearTREC(lista);
 
     }
 }

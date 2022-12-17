@@ -1,2 +1,4 @@
-com\mb\solrj\APISolrj.class
+com\mb\solrj\StandAloneAnnie.class
+com\mb\solrj\StandAloneAnnie$SortedAnnotationList.class
 com\mb\solrj\Solrj.class
+com\mb\solrj\APISolrj.class

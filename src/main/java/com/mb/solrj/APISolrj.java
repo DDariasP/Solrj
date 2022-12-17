@@ -4,9 +4,22 @@
  */
 package com.mb.solrj;
 
+import gate.Annotation;
+import gate.AnnotationSet;
+import gate.Corpus;
+import gate.Document;
+import gate.Factory;
+import gate.FeatureMap;
+import gate.Gate;
+import gate.GateConstants;
+import gate.corpora.RepositioningInfo;
+import gate.util.GateException;
+import gate.util.Out;
 import java.io.*;
 import java.util.*;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.solr.client.solrj.SolrClient;
@@ -99,6 +112,154 @@ public class APISolrj {
             System.out.println("Error en Scanner.");
         }
         System.out.println("\nDocumentos de " + filename + " indexados en " + collection + ".\n");
+    }
+
+    public static void parsearAnnie(String filename, String collection) throws GateException, IOException, URISyntaxException {
+
+        // initialise the GATE library
+        Out.prln("Initialising GATE...");
+        Gate.init();
+        Out.prln("...GATE initialised");
+
+        // initialise ANNIE (this may take several minutes)
+        StandAloneAnnie annie = new StandAloneAnnie();
+        annie.initAnnie();
+
+        // create a GATE corpus and add a document for each command-line
+        // argument
+        Corpus corpus = Factory.newCorpus("StandAloneAnnie corpus");
+
+        URL u = new URL("file:" + filename);
+        FeatureMap params = Factory.newFeatureMap();
+        params.put("sourceUrl", u);
+        params.put("preserveOriginalContent", new Boolean(true));
+        params.put("collectRepositioningInfo", new Boolean(true));
+        Out.prln("Creating doc for " + u);
+        Document doc = (Document) Factory.createResource("gate.corpora.DocumentImpl", params);
+        corpus.add(doc);
+
+        // tell the pipeline about the corpus and run it
+        annie.setCorpus(corpus);
+        annie.execute();
+
+        // for each document, get an XML document with the
+        // person and location names added
+        Iterator iter = corpus.iterator();
+        int count = 0;
+        String startTagPart_1 = "<span GateID=\"";
+        String startTagPart_2 = "\" title=\"";
+        String startTagPart_3 = "\" style=\"background:Red;\">";
+        String endTag = "</span>";
+
+        while (iter.hasNext()) {
+            doc = (Document) iter.next();
+            AnnotationSet defaultAnnotSet = doc.getAnnotations();
+            Set annotTypesRequired = new HashSet();
+            annotTypesRequired.add("Person");
+            annotTypesRequired.add("Organization");
+            annotTypesRequired.add("Location");
+            annotTypesRequired.add("Date");
+            Set<Annotation> anno
+                    = new HashSet<Annotation>(defaultAnnotSet.get(annotTypesRequired));
+
+            FeatureMap features = doc.getFeatures();
+            String originalContent = (String) features.get(GateConstants.ORIGINAL_DOCUMENT_CONTENT_FEATURE_NAME);
+            RepositioningInfo info = (RepositioningInfo) features.get(GateConstants.DOCUMENT_REPOSITIONING_INFO_FEATURE_NAME);
+
+            ++count;
+            File file = new File(collection + "_" + count + ".html");
+            Out.prln("File name: '" + file.getAbsolutePath() + "'");
+            if (originalContent != null && info != null) {
+                Out.prln("OrigContent and reposInfo existing. Generate file...");
+
+                Iterator it = anno.iterator();
+                Annotation currAnnot;
+                StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
+
+                while (it.hasNext()) {
+                    currAnnot = (Annotation) it.next();
+                    sortedAnnotations.addSortedExclusive(currAnnot);
+                } // while
+
+                StringBuffer editableContent = new StringBuffer(originalContent);
+                long insertPositionEnd;
+                long insertPositionStart;
+                // insert anotation tags backward
+                Out.prln("Unsorted annotations count: " + anno.size());
+                Out.prln("Sorted annotations count: " + sortedAnnotations.size());
+                for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
+                    currAnnot = (Annotation) sortedAnnotations.get(i);
+                    insertPositionStart
+                            = currAnnot.getStartNode().getOffset().longValue();
+                    insertPositionStart = info.getOriginalPos(insertPositionStart);
+                    insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
+                    insertPositionEnd = info.getOriginalPos(insertPositionEnd, true);
+                    if (insertPositionEnd != -1 && insertPositionStart != -1) {
+                        editableContent.insert((int) insertPositionEnd, endTag);
+                        editableContent.insert((int) insertPositionStart, startTagPart_3);
+                        editableContent.insert((int) insertPositionStart,
+                                currAnnot.getType());
+                        editableContent.insert((int) insertPositionStart, startTagPart_2);
+                        editableContent.insert((int) insertPositionStart,
+                                currAnnot.getId().toString());
+                        editableContent.insert((int) insertPositionStart, startTagPart_1);
+                    } // if
+                } // for
+
+                FileWriter writer = new FileWriter(file);
+                writer.write(editableContent.toString());
+                writer.close();
+            } // if - should generate
+            else if (originalContent != null) {
+                Out.prln("OrigContent existing. Generate file...");
+
+                Iterator it = anno.iterator();
+                Annotation currAnnot;
+                StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
+
+                while (it.hasNext()) {
+                    currAnnot = (Annotation) it.next();
+                    sortedAnnotations.addSortedExclusive(currAnnot);
+                } // while
+
+                StringBuffer editableContent = new StringBuffer(originalContent);
+                long insertPositionEnd;
+                long insertPositionStart;
+                // insert anotation tags backward
+                Out.prln("Unsorted annotations count: " + anno.size());
+                Out.prln("Sorted annotations count: " + sortedAnnotations.size());
+                for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
+                    currAnnot = (Annotation) sortedAnnotations.get(i);
+                    insertPositionStart
+                            = currAnnot.getStartNode().getOffset().longValue();
+                    insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
+                    if (insertPositionEnd != -1 && insertPositionStart != -1) {
+                        editableContent.insert((int) insertPositionEnd, endTag);
+                        editableContent.insert((int) insertPositionStart, startTagPart_3);
+                        editableContent.insert((int) insertPositionStart,
+                                currAnnot.getType());
+                        editableContent.insert((int) insertPositionStart, startTagPart_2);
+                        editableContent.insert((int) insertPositionStart,
+                                currAnnot.getId().toString());
+                        editableContent.insert((int) insertPositionStart, startTagPart_1);
+                    } // if
+                } // for
+
+                FileWriter writer = new FileWriter(file);
+                writer.write(editableContent.toString());
+                writer.close();
+            } else {
+                Out.prln("Content : " + originalContent);
+                Out.prln("Repositioning: " + info);
+            }
+
+            String xmlDocument = doc.toXml(anno, false);
+            String fileName = new String(collection + "_" + count + ".xml");
+            FileWriter writer = new FileWriter(fileName);
+            writer.write(xmlDocument);
+            writer.close();
+
+        }
     }
 
     public static Queue<String> parsearQRY(String filename) {
