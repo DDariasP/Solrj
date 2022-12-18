@@ -1,0 +1,33 @@
+C:\Users\Diego\Documents\NetBeansProjects\Solrj>trec_eval.exe CISI_REL.TREC trec_solr_file
+
+Queryid (Num):       76
+Total number of documents over all queries
+    Retrieved:     7600
+    Relevant:      3114
+    Rel_ret:       1066
+Interpolated Recall - Precision Averages:
+    at 0.00       0.6565
+    at 0.10       0.4408
+    at 0.20       0.3152
+    at 0.30       0.1962
+    at 0.40       0.1284
+    at 0.50       0.0921
+    at 0.60       0.0514
+    at 0.70       0.0263
+    at 0.80       0.0182
+    at 0.90       0.0021
+    at 1.00       0.0021
+Average precision (non-interpolated) over all rel docs
+                  0.1536
+Precision:
+  At    5 docs:   0.3974
+  At   10 docs:   0.3342
+  At   15 docs:   0.2956
+  At   20 docs:   0.2645
+  At   30 docs:   0.2263
+  At  100 docs:   0.1403
+  At  200 docs:   0.0701
+  At  500 docs:   0.0281
+  At 1000 docs:   0.0140
+R-Precision (precision after R (= num_rel for a query) docs retrieved):
+    Exact:        0.2226

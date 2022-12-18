@@ -6,6 +6,7 @@ package com.mb.solrj;
 
 import static com.mb.solrj.APISolrj.borrarTodo;
 import static com.mb.solrj.APISolrj.consultar;
+import static com.mb.solrj.APISolrj.consultarGATE;
 import static com.mb.solrj.APISolrj.crearTREC;
 import static com.mb.solrj.APISolrj.indexarCISI;
 import static com.mb.solrj.APISolrj.indexarCISIGATE;
@@ -37,11 +38,11 @@ public class Solrj {
         stopwords.add("it no such that");
         consultar(coleccion, stopwords);*/
         
-        //borrarTodo(coleccion);
-        //indexarCISIGATE(archivo1,coleccion);
+        borrarTodo(coleccion);
+        indexarCISIGATE(archivo1,coleccion);
         Queue<Query> consultas = parsearQRYGATE(archivo2,salida);
-        //lista = consultar(coleccion, consultas);
-        //crearTREC(lista);
+        lista = consultarGATE(coleccion, consultas);
+        crearTREC(lista);
 
     }
 }

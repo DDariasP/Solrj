@@ -541,8 +541,8 @@ public class APISolrj {
             }
             writer.close();
 
-            //filename = parsearAnnie(qry.getName(), output);
-            filename = output + ".xml";
+            filename = parsearAnnie(qry.getName(), output);
+            //filename = output + ".xml";
 
             Queue<String> docs = new LinkedList<>();
             String field;
@@ -582,28 +582,40 @@ public class APISolrj {
                 matcher = pattern.matcher(line);
                 while (matcher.find()) {
                     field = matcher.group(2);
-                    person = person + "||" + field;
+                    person = person + field + "||";
+                }
+                if (person.length() > 0) {
+                    person = person.substring(0, person.length() - 2);
                 }
 
                 pattern = Pattern.compile("(<Organization>)(.*?)(</Organization>)");
                 matcher = pattern.matcher(line);
                 while (matcher.find()) {
                     field = matcher.group(2);
-                    org = org + "||" + field;
+                    org = org + field + "||";
+                }
+                if (org.length() > 0) {
+                    org = org.substring(0, org.length() - 2);
                 }
 
                 pattern = Pattern.compile("(<Location>)(.*?)(</Location>)");
                 matcher = pattern.matcher(line);
                 while (matcher.find()) {
                     field = matcher.group(2);
-                    location = location + "||" + field;
+                    location = location + field + "||";
+                }
+                if (location.length() > 0) {
+                    location = location.substring(0, location.length() - 2);
                 }
 
                 pattern = Pattern.compile("(<Date>)(.*?)(</Date>)");
                 matcher = pattern.matcher(line);
                 while (matcher.find()) {
                     field = matcher.group(2);
-                    date = date + "||" + field;
+                    date = date + field + "||";
+                }
+                if (date.length() > 0) {
+                    date = date.substring(0, date.length() - 2);
                 }
 
                 Query q = new Query(text.remove(), person, org, location, date);
@@ -704,6 +716,65 @@ public class APISolrj {
                 query.setQuery("text:" + line);
                 //query.setQuery("Apple");
                 //query.addFilterQuery("cat:electronics");
+                query.setRows(100); //numero optimo de docs por consulta
+                query.setFields("ndoc", "score");
+                rsp = client.query(query);
+                docs = rsp.getResults();
+                list[numquery] = docs;
+                if (list[numquery].isEmpty()) {
+                    numempty++;
+                }
+                for (int i = 0; i < docs.size(); ++i) {
+                    System.out.println(docs.get(i));
+                }
+            }
+        } catch (SolrServerException ex) {
+            System.out.println("Error en Solrj.");
+        } catch (IOException ex) {
+            System.out.println("Error en Scanner.");
+        }
+        System.out.println("\n" + numquery + " consultas en " + collection + " realizadas.");
+        System.out.println("\n" + numempty + " consultas sin resultados.");
+        return list;
+    }
+
+    public static SolrDocumentList[] consultarGATE(String collection, Queue<Query> qlist) {
+
+        //Preparing the Solr client
+        String urlString = "http://localhost:8983/solr/" + collection;
+        SolrClient client = new HttpSolrClient.Builder(urlString).build();
+
+        final SolrQuery query = new SolrQuery();
+        QueryResponse rsp = new QueryResponse();
+        SolrDocumentList docs = new SolrDocumentList();
+        SolrDocumentList[] list = new SolrDocumentList[qlist.size() + 1];
+        String line;
+        Query q;
+        int numquery, numempty;
+        numquery = 0;
+        numempty = 0;
+        String total;
+        //System.out.println("\nResultados de las consultas en " + collection + ":");
+        try {
+            while (!qlist.isEmpty()) {
+                numquery++;
+                q = qlist.remove();
+                System.out.println("\nConsulta: " + numquery);
+                total = "text:" + q.getText();
+                if (!q.getDate().equals("")) {
+                    total = total + " OR date:" + q.getDate();
+                }
+                if (!q.getLocation().equals("")) {
+                    total = total + " OR location:" + q.getLocation();
+                }
+                if (!q.getOrg().equals("")) {
+                    total = total + " OR org:" + q.getOrg();
+                }
+                if (!q.getPerson().equals("")) {
+                    total = total + " OR person:" + q.getPerson();
+                }
+                System.out.println(total);
+                query.setQuery(total);
                 query.setRows(100); //numero optimo de docs por consulta
                 query.setFields("ndoc", "score");
                 rsp = client.query(query);
