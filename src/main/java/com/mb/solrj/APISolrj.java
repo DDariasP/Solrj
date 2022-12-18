@@ -20,6 +20,8 @@ import java.util.*;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.solr.client.solrj.SolrClient;
@@ -114,154 +116,325 @@ public class APISolrj {
         System.out.println("\nDocumentos de " + filename + " indexados en " + collection + ".\n");
     }
 
-    public static void parsearAnnie(String filename, String collection) throws GateException, IOException, URISyntaxException {
+    /**
+     *
+     * @param filename
+     * @param collection
+     */
+    public static void indexarCISIGATE(String filename, String collection) {
 
-        // initialise the GATE library
-        Out.prln("Initialising GATE...");
-        Gate.init();
-        Out.prln("...GATE initialised");
+        String line;
+        String[] tokens;
+        boolean next = true;
 
-        // initialise ANNIE (this may take several minutes)
-        StandAloneAnnie annie = new StandAloneAnnie();
-        annie.initAnnie();
-
-        // create a GATE corpus and add a document for each command-line
-        // argument
-        Corpus corpus = Factory.newCorpus("StandAloneAnnie corpus");
-
-        URL u = new URL("file:" + filename);
-        FeatureMap params = Factory.newFeatureMap();
-        params.put("sourceUrl", u);
-        params.put("preserveOriginalContent", new Boolean(true));
-        params.put("collectRepositioningInfo", new Boolean(true));
-        Out.prln("Creating doc for " + u);
-        Document doc = (Document) Factory.createResource("gate.corpora.DocumentImpl", params);
-        corpus.add(doc);
-
-        // tell the pipeline about the corpus and run it
-        annie.setCorpus(corpus);
-        annie.execute();
-
-        // for each document, get an XML document with the
-        // person and location names added
-        Iterator iter = corpus.iterator();
-        int count = 0;
-        String startTagPart_1 = "<span GateID=\"";
-        String startTagPart_2 = "\" title=\"";
-        String startTagPart_3 = "\" style=\"background:Red;\">";
-        String endTag = "</span>";
-
-        while (iter.hasNext()) {
-            doc = (Document) iter.next();
-            AnnotationSet defaultAnnotSet = doc.getAnnotations();
-            Set annotTypesRequired = new HashSet();
-            annotTypesRequired.add("Person");
-            annotTypesRequired.add("Organization");
-            annotTypesRequired.add("Location");
-            annotTypesRequired.add("Date");
-            Set<Annotation> anno
-                    = new HashSet<Annotation>(defaultAnnotSet.get(annotTypesRequired));
-
-            FeatureMap features = doc.getFeatures();
-            String originalContent = (String) features.get(GateConstants.ORIGINAL_DOCUMENT_CONTENT_FEATURE_NAME);
-            RepositioningInfo info = (RepositioningInfo) features.get(GateConstants.DOCUMENT_REPOSITIONING_INFO_FEATURE_NAME);
-
-            ++count;
-            File file = new File(collection + "_" + count + ".html");
-            Out.prln("File name: '" + file.getAbsolutePath() + "'");
-            if (originalContent != null && info != null) {
-                Out.prln("OrigContent and reposInfo existing. Generate file...");
-
-                Iterator it = anno.iterator();
-                Annotation currAnnot;
-                StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
-
-                while (it.hasNext()) {
-                    currAnnot = (Annotation) it.next();
-                    sortedAnnotations.addSortedExclusive(currAnnot);
-                } // while
-
-                StringBuffer editableContent = new StringBuffer(originalContent);
-                long insertPositionEnd;
-                long insertPositionStart;
-                // insert anotation tags backward
-                Out.prln("Unsorted annotations count: " + anno.size());
-                Out.prln("Sorted annotations count: " + sortedAnnotations.size());
-                for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
-                    currAnnot = (Annotation) sortedAnnotations.get(i);
-                    insertPositionStart
-                            = currAnnot.getStartNode().getOffset().longValue();
-                    insertPositionStart = info.getOriginalPos(insertPositionStart);
-                    insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
-                    insertPositionEnd = info.getOriginalPos(insertPositionEnd, true);
-                    if (insertPositionEnd != -1 && insertPositionStart != -1) {
-                        editableContent.insert((int) insertPositionEnd, endTag);
-                        editableContent.insert((int) insertPositionStart, startTagPart_3);
-                        editableContent.insert((int) insertPositionStart,
-                                currAnnot.getType());
-                        editableContent.insert((int) insertPositionStart, startTagPart_2);
-                        editableContent.insert((int) insertPositionStart,
-                                currAnnot.getId().toString());
-                        editableContent.insert((int) insertPositionStart, startTagPart_1);
-                    } // if
-                } // for
-
-                FileWriter writer = new FileWriter(file);
-                writer.write(editableContent.toString());
-                writer.close();
-            } // if - should generate
-            else if (originalContent != null) {
-                Out.prln("OrigContent existing. Generate file...");
-
-                Iterator it = anno.iterator();
-                Annotation currAnnot;
-                StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
-
-                while (it.hasNext()) {
-                    currAnnot = (Annotation) it.next();
-                    sortedAnnotations.addSortedExclusive(currAnnot);
-                } // while
-
-                StringBuffer editableContent = new StringBuffer(originalContent);
-                long insertPositionEnd;
-                long insertPositionStart;
-                // insert anotation tags backward
-                Out.prln("Unsorted annotations count: " + anno.size());
-                Out.prln("Sorted annotations count: " + sortedAnnotations.size());
-                for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
-                    currAnnot = (Annotation) sortedAnnotations.get(i);
-                    insertPositionStart
-                            = currAnnot.getStartNode().getOffset().longValue();
-                    insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
-                    if (insertPositionEnd != -1 && insertPositionStart != -1) {
-                        editableContent.insert((int) insertPositionEnd, endTag);
-                        editableContent.insert((int) insertPositionStart, startTagPart_3);
-                        editableContent.insert((int) insertPositionStart,
-                                currAnnot.getType());
-                        editableContent.insert((int) insertPositionStart, startTagPart_2);
-                        editableContent.insert((int) insertPositionStart,
-                                currAnnot.getId().toString());
-                        editableContent.insert((int) insertPositionStart, startTagPart_1);
-                    } // if
-                } // for
-
-                FileWriter writer = new FileWriter(file);
-                writer.write(editableContent.toString());
-                writer.close();
+        try {
+            File corpus = new File("corpus.txt");
+            if (corpus.exists()) {
+                corpus.delete();
+                System.out.println("\nArchivo " + corpus.getName() + " sobreescrito.\n");
             } else {
-                Out.prln("Content : " + originalContent);
-                Out.prln("Repositioning: " + info);
+                System.out.println("\nArchivo " + corpus.getName() + " creado.\n");
             }
+            corpus.createNewFile();
 
-            String xmlDocument = doc.toXml(anno, false);
-            String fileName = new String(collection + "_" + count + ".xml");
-            FileWriter writer = new FileWriter(fileName);
-            writer.write(xmlDocument);
+            Scanner scan = new Scanner(new File(filename));
+            FileWriter writer = new FileWriter("corpus.txt");
+
+            while (scan.hasNextLine()) {
+                line = scan.nextLine();
+                if (line.trim().length() > 0) {
+                    tokens = line.split("\\s+");
+                    if (".X".equals(tokens[0])) {
+                        writer.write(line + "\n");
+                        next = false;
+                    }
+                    if (".I".equals(tokens[0])) {
+                        next = true;
+                    }
+                    if (next) {
+                        line = line.replaceAll("[\\+\\-\\&&\\!\\(\\)\\{\\}\\[\\]\\^\"\\~\\*\\?\\:\\/\\'\\,\\:\\;]", "");
+                        writer.write(line + "\n");
+                    }
+                }
+            }
             writer.close();
 
+            filename = parsearAnnie(corpus.getName(), collection);
+            //filename = collection + ".xml";
+
+            final SolrClient client = new HttpSolrClient.Builder("http://localhost:8983/solr").build();
+            final SolrInputDocument doc = new SolrInputDocument();
+            Queue<String> docs = new LinkedList<>();
+            String field;
+            String total = "";
+            Pattern pattern;
+            Matcher matcher;
+            int ndoc = 0;
+
+            scan = new Scanner(new File(filename));
+            while (scan.hasNextLine()) {
+                line = scan.nextLine();
+                if (line.trim().length() > 0) {
+                    total = total + " " + line;
+                    tokens = line.split("\\s+");
+                    if (".X".equals(tokens[0])) {
+                        docs.add(total);
+                        total = "";
+                    }
+                }
+            }
+            while (!docs.isEmpty()) {
+                line = docs.remove();
+
+                //Campos ANNIE
+                pattern = Pattern.compile("(<Person>)(.*?)(</Person>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    doc.addField("person", field);
+                }
+                line = line.replaceAll("<Person>", "");
+                line = line.replaceAll("</Person>", "");
+
+                pattern = Pattern.compile("(<Organization>)(.*?)(</Organization>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    doc.addField("org", field);
+                }
+                line = line.replaceAll("<Organization>", "");
+                line = line.replaceAll("</Organization>", "");
+
+                pattern = Pattern.compile("(<Location>)(.*?)(</Location>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    doc.addField("location", field);
+                }
+                line = line.replaceAll("<Location>", "");
+                line = line.replaceAll("</Location>", "");
+
+                pattern = Pattern.compile("(<Date>)(.*?)(</Date>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    doc.addField("date", field);
+                }
+                line = line.replaceAll("<Date>", "");
+                line = line.replaceAll("</Date>", "");
+
+                //Campos básicos
+                pattern = Pattern.compile("(\\.I) ([0-9]*)");
+                matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    field = matcher.group(2);
+                    doc.addField("ndoc", field);
+                }
+
+                pattern = Pattern.compile("(\\.T)(.*?)(\\.A)");
+                matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    field = matcher.group(2).trim();
+                    doc.addField("title", field);
+                }
+
+                pattern = Pattern.compile("(\\.A)(.*?)(\\.W)");
+                matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    field = matcher.group(2).trim();
+                    doc.addField("author", field);
+                }
+
+                pattern = Pattern.compile("(\\.W)(.*?)(\\.X)");
+                matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    field = matcher.group(2).trim();
+                    doc.addField("text", field);
+                }
+
+                final UpdateResponse updateResponse = client.add(collection, doc);
+                // Indexed documents must be committed
+                client.commit(collection);
+                ndoc++;
+                if (ndoc % 100 == 0) {
+                    System.out.println("Documento " + ndoc + " indexado en " + collection + ".");
+                }
+                doc.clear();
+
+            }
+        } catch (FileNotFoundException ex) {
+        } catch (SolrServerException ex) {
+        } catch (IOException e) {
         }
     }
 
+    /**
+     *
+     * @param filename
+     * @param output
+     * @return
+     */
+    public static String parsearAnnie(String filename, String output) {
+
+        try {
+
+            // initialise the GATE library
+            Out.prln("Initialising GATE...");
+            Gate.init();
+            Out.prln("...GATE initialised");
+
+            // initialise ANNIE (this may take several minutes)
+            StandAloneAnnie annie = new StandAloneAnnie();
+            annie.initAnnie();
+
+            // create a GATE corpus and add a document for each command-line
+            // argument
+            Corpus corpus = Factory.newCorpus("StandAloneAnnie corpus");
+
+            URL u = new URL("file:" + filename);
+            FeatureMap params = Factory.newFeatureMap();
+            params.put("sourceUrl", u);
+            params.put("preserveOriginalContent", new Boolean(true));
+            params.put("collectRepositioningInfo", new Boolean(true));
+            Out.prln("Creating doc for " + u);
+            Document doc = (Document) Factory.createResource("gate.corpora.DocumentImpl", params);
+            corpus.add(doc);
+
+            // tell the pipeline about the corpus and run it
+            annie.setCorpus(corpus);
+            annie.execute();
+
+            // for each document, get an XML document with the
+            // person and location names added
+            Iterator iter = corpus.iterator();
+            String startTagPart_1 = "<span GateID=\"";
+            String startTagPart_2 = "\" title=\"";
+            String startTagPart_3 = "\" style=\"background:Red;\">";
+            String endTag = "</span>";
+
+            while (iter.hasNext()) {
+                doc = (Document) iter.next();
+                AnnotationSet defaultAnnotSet = doc.getAnnotations();
+                Set annotTypesRequired = new HashSet();
+                annotTypesRequired.add("Person");
+                annotTypesRequired.add("Organization");
+                annotTypesRequired.add("Location");
+                annotTypesRequired.add("Date");
+                Set<Annotation> anno
+                        = new HashSet<Annotation>(defaultAnnotSet.get(annotTypesRequired));
+
+                FeatureMap features = doc.getFeatures();
+                String originalContent = (String) features.get(GateConstants.ORIGINAL_DOCUMENT_CONTENT_FEATURE_NAME);
+                RepositioningInfo info = (RepositioningInfo) features.get(GateConstants.DOCUMENT_REPOSITIONING_INFO_FEATURE_NAME);
+
+                File file = new File(output + ".html");
+                Out.prln("File name: '" + file.getAbsolutePath() + "'");
+                if (originalContent != null && info != null) {
+                    Out.prln("OrigContent and reposInfo existing. Generate file...");
+
+                    Iterator it = anno.iterator();
+                    Annotation currAnnot;
+                    StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
+
+                    while (it.hasNext()) {
+                        currAnnot = (Annotation) it.next();
+                        sortedAnnotations.addSortedExclusive(currAnnot);
+                    } // while
+
+                    StringBuffer editableContent = new StringBuffer(originalContent);
+                    long insertPositionEnd;
+                    long insertPositionStart;
+                    // insert anotation tags backward
+                    Out.prln("Unsorted annotations count: " + anno.size());
+                    Out.prln("Sorted annotations count: " + sortedAnnotations.size());
+                    for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
+                        currAnnot = (Annotation) sortedAnnotations.get(i);
+                        insertPositionStart
+                                = currAnnot.getStartNode().getOffset().longValue();
+                        insertPositionStart = info.getOriginalPos(insertPositionStart);
+                        insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
+                        insertPositionEnd = info.getOriginalPos(insertPositionEnd, true);
+                        if (insertPositionEnd != -1 && insertPositionStart != -1) {
+                            editableContent.insert((int) insertPositionEnd, endTag);
+                            editableContent.insert((int) insertPositionStart, startTagPart_3);
+                            editableContent.insert((int) insertPositionStart,
+                                    currAnnot.getType());
+                            editableContent.insert((int) insertPositionStart, startTagPart_2);
+                            editableContent.insert((int) insertPositionStart,
+                                    currAnnot.getId().toString());
+                            editableContent.insert((int) insertPositionStart, startTagPart_1);
+                        } // if
+                    } // for
+
+                    FileWriter writer = new FileWriter(file);
+                    writer.write(editableContent.toString());
+                    writer.close();
+                } // if - should generate
+                else if (originalContent != null) {
+                    Out.prln("OrigContent existing. Generate file...");
+
+                    Iterator it = anno.iterator();
+                    Annotation currAnnot;
+                    StandAloneAnnie.SortedAnnotationList sortedAnnotations = new StandAloneAnnie.SortedAnnotationList();
+
+                    while (it.hasNext()) {
+                        currAnnot = (Annotation) it.next();
+                        sortedAnnotations.addSortedExclusive(currAnnot);
+                    } // while
+
+                    StringBuffer editableContent = new StringBuffer(originalContent);
+                    long insertPositionEnd;
+                    long insertPositionStart;
+                    // insert anotation tags backward
+                    Out.prln("Unsorted annotations count: " + anno.size());
+                    Out.prln("Sorted annotations count: " + sortedAnnotations.size());
+                    for (int i = sortedAnnotations.size() - 1; i >= 0; --i) {
+                        currAnnot = (Annotation) sortedAnnotations.get(i);
+                        insertPositionStart
+                                = currAnnot.getStartNode().getOffset().longValue();
+                        insertPositionEnd = currAnnot.getEndNode().getOffset().longValue();
+                        if (insertPositionEnd != -1 && insertPositionStart != -1) {
+                            editableContent.insert((int) insertPositionEnd, endTag);
+                            editableContent.insert((int) insertPositionStart, startTagPart_3);
+                            editableContent.insert((int) insertPositionStart,
+                                    currAnnot.getType());
+                            editableContent.insert((int) insertPositionStart, startTagPart_2);
+                            editableContent.insert((int) insertPositionStart,
+                                    currAnnot.getId().toString());
+                            editableContent.insert((int) insertPositionStart, startTagPart_1);
+                        } // if
+                    } // for
+
+                    FileWriter writer = new FileWriter(file);
+                    writer.write(editableContent.toString());
+                    writer.close();
+                } else {
+                    Out.prln("Content : " + originalContent);
+                    Out.prln("Repositioning: " + info);
+                }
+
+                String xmlDocument = doc.toXml(anno, false);
+                String fileName = new String(output + ".xml");
+                FileWriter writer = new FileWriter(fileName);
+                writer.write(xmlDocument);
+                writer.close();
+
+            }
+
+        } catch (IOException e) {
+        } catch (GateException ex) {
+        }
+
+        filename = output + ".xml";
+        return filename;
+
+    }
+
+    /**
+     *
+     * @param filename
+     * @return
+     */
     public static Queue<String> parsearQRY(String filename) {
 
         Queue<String> docs = new LinkedList<>();
@@ -325,11 +498,15 @@ public class APISolrj {
             System.out.println("Error en Scanner.");
         }
 
-        System.out.println(
-                "\nConsultas de " + filename + " parseadas.\n");
+        System.out.println("\nConsultas de " + filename + " parseadas.\n");
         return words;
     }
 
+    /**
+     *
+     * @param line
+     * @return
+     */
     public static String entidadesQRY(String line) {
 
         Pattern pattern;
@@ -380,6 +557,12 @@ public class APISolrj {
         return line;
     }
 
+    /**
+     *
+     * @param collection
+     * @param words
+     * @return
+     */
     public static SolrDocumentList[] consultar(String collection, Queue<String> words) {
 
         //Preparing the Solr client
@@ -426,6 +609,10 @@ public class APISolrj {
         return list;
     }
 
+    /**
+     *
+     * @param list
+     */
     public static void crearTREC(SolrDocumentList[] list) {
         String nqry, ndoc, rank, score, line;
         int limit = 0;
@@ -468,6 +655,10 @@ public class APISolrj {
         }
     }
 
+    /**
+     *
+     * @param collection
+     */
     public static void borrarTodo(String collection) {
 
         //Preparing the Solr client

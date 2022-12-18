@@ -8,6 +8,7 @@ import static com.mb.solrj.APISolrj.borrarTodo;
 import static com.mb.solrj.APISolrj.consultar;
 import static com.mb.solrj.APISolrj.crearTREC;
 import static com.mb.solrj.APISolrj.indexarCISI;
+import static com.mb.solrj.APISolrj.indexarCISIGATE;
 import java.util.Queue;
 import static com.mb.solrj.APISolrj.parsearQRY;
 import gate.util.GateException;
@@ -27,6 +28,7 @@ public class Solrj {
         String archivo1 = ".\\collection\\CISI.ALL";
         String archivo2 = ".\\collection\\CISI.QRY";
         String coleccion = "CISI";
+        String salida = "QRY";
         SolrDocumentList[] lista;
         
         /*Queue<String> stopwords = new LinkedList<>();
@@ -34,9 +36,8 @@ public class Solrj {
         stopwords.add("it no such that");
         consultar(coleccion, stopwords);*/
         
-        //borrarTodo(coleccion);
-        //indexarCISI(archivo1,coleccion);
-        parsearAnnie(archivo1,coleccion);
+        borrarTodo(coleccion);
+        indexarCISIGATE(archivo1,coleccion);
         //Queue<String> consultas = parsearQRY(archivo2);
         //lista = consultar(coleccion, consultas);
         //crearTREC(lista);
