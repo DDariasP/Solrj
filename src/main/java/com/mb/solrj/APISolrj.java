@@ -287,7 +287,7 @@ public class APISolrj {
             StandAloneAnnie annie = new StandAloneAnnie();
             annie.initAnnie();
 
-            // create a GATE corpus and add a document for each command-line
+            // create a GATE qry and add a document for each command-line
             // argument
             Corpus corpus = Factory.newCorpus("StandAloneAnnie corpus");
 
@@ -300,7 +300,7 @@ public class APISolrj {
             Document doc = (Document) Factory.createResource("gate.corpora.DocumentImpl", params);
             corpus.add(doc);
 
-            // tell the pipeline about the corpus and run it
+            // tell the pipeline about the qry and run it
             annie.setCorpus(corpus);
             annie.execute();
 
@@ -500,6 +500,123 @@ public class APISolrj {
 
         System.out.println("\nConsultas de " + filename + " parseadas.\n");
         return words;
+    }
+
+    /**
+     *
+     * @param filename
+     * @param output
+     * @return
+     */
+    public static Queue<Query> parsearQRYGATE(String filename, String output) {
+
+        Queue<String> text = parsearQRY(filename);
+        Queue<Query> list = new LinkedList<>();
+
+        try {
+            File qry = new File("qry.txt");
+            if (qry.exists()) {
+                qry.delete();
+                System.out.println("\nArchivo " + qry.getName() + " sobreescrito.\n");
+            } else {
+                System.out.println("\nArchivo " + qry.getName() + " creado.\n");
+            }
+            qry.createNewFile();
+
+            Scanner scan = new Scanner(new File(filename));
+            FileWriter writer = new FileWriter("qry.txt");
+
+            String line;
+            boolean found = false;
+            while (!found) {
+                line = scan.nextLine();
+                if (".I 112".equals(line)) {
+                    found = true;
+                    writer.write(line + "\n");
+                }
+                if (line.trim().length() > 0 && !found) {
+                    line = line.replaceAll("[\\+\\-\\&&\\!\\(\\)\\{\\}\\[\\]\\^\"\\~\\*\\?\\:\\/\\'\\,\\:\\;]", "");
+                    writer.write(line + "\n");
+                }
+            }
+            writer.close();
+
+            //filename = parsearAnnie(qry.getName(), output);
+            filename = output + ".xml";
+
+            Queue<String> docs = new LinkedList<>();
+            String field;
+            String total = "";
+            Pattern pattern;
+            Matcher matcher;
+            String[] tokens;
+            int count = 0;
+
+            scan = new Scanner(new File(filename));
+            while (scan.hasNextLine()) {
+                line = scan.nextLine();
+                if (line.trim().length() > 0) {
+                    total = total + " " + line;
+                    tokens = line.split("\\s+");
+                    if (".I".equals(tokens[0]) && count != 0) {
+                        docs.add(total);
+                        System.out.println(total);
+                        total = line;
+                        count = 0;
+                    } else {
+                        count++;
+                    }
+                }
+            }
+
+            String person, org, location, date;
+            while (!docs.isEmpty()) {
+                line = docs.remove();
+                //Campos ANNIE
+                person = "";
+                org = "";
+                location = "";
+                date = "";
+
+                pattern = Pattern.compile("(<Person>)(.*?)(</Person>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    person = person + "||" + field;
+                }
+
+                pattern = Pattern.compile("(<Organization>)(.*?)(</Organization>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    org = org + "||" + field;
+                }
+
+                pattern = Pattern.compile("(<Location>)(.*?)(</Location>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    location = location + "||" + field;
+                }
+
+                pattern = Pattern.compile("(<Date>)(.*?)(</Date>)");
+                matcher = pattern.matcher(line);
+                while (matcher.find()) {
+                    field = matcher.group(2);
+                    date = date + "||" + field;
+                }
+
+                Query q = new Query(text.remove(), person, org, location, date);
+                //System.out.println(q.getDate() + "\n" + q.getLocation() + "\n" + q.getOrg() + "\n" + q.getPerson() + "\n" + q.getText());
+                list.add(q);
+            }
+
+        } catch (FileNotFoundException ex) {
+
+        } catch (IOException e) {
+        }
+
+        return list;
     }
 
     /**

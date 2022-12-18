@@ -17,6 +17,7 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.util.*;
 import static com.mb.solrj.APISolrj.parsearAnnie;
+import static com.mb.solrj.APISolrj.parsearQRYGATE;
 
 /**
  *
@@ -36,9 +37,9 @@ public class Solrj {
         stopwords.add("it no such that");
         consultar(coleccion, stopwords);*/
         
-        borrarTodo(coleccion);
-        indexarCISIGATE(archivo1,coleccion);
-        //Queue<String> consultas = parsearQRY(archivo2);
+        //borrarTodo(coleccion);
+        //indexarCISIGATE(archivo1,coleccion);
+        Queue<Query> consultas = parsearQRYGATE(archivo2,salida);
         //lista = consultar(coleccion, consultas);
         //crearTREC(lista);
 
