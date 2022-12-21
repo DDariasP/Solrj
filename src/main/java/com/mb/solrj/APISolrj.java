@@ -159,7 +159,7 @@ public class APISolrj {
             }
             writer.close();
 
-            filename = parsearAnnie(corpus.getName(), collection);
+            filename = parsearANNIE(corpus.getName(), collection);
             //filename = collection + ".xml";
 
             final SolrClient client = new HttpSolrClient.Builder("http://localhost:8983/solr").build();
@@ -183,15 +183,18 @@ public class APISolrj {
                     }
                 }
             }
+            int notags = 0;
+            boolean tags;
             while (!docs.isEmpty()) {
                 line = docs.remove();
-
+                tags = false;
                 //Campos ANNIE
                 pattern = Pattern.compile("(<Person>)(.*?)(</Person>)");
                 matcher = pattern.matcher(line);
                 while (matcher.find()) {
                     field = matcher.group(2);
                     doc.addField("person", field);
+                    tags = true;
                 }
                 line = line.replaceAll("<Person>", "");
                 line = line.replaceAll("</Person>", "");
@@ -201,6 +204,7 @@ public class APISolrj {
                 while (matcher.find()) {
                     field = matcher.group(2);
                     doc.addField("org", field);
+                    tags = true;
                 }
                 line = line.replaceAll("<Organization>", "");
                 line = line.replaceAll("</Organization>", "");
@@ -210,6 +214,7 @@ public class APISolrj {
                 while (matcher.find()) {
                     field = matcher.group(2);
                     doc.addField("location", field);
+                    tags = true;
                 }
                 line = line.replaceAll("<Location>", "");
                 line = line.replaceAll("</Location>", "");
@@ -219,9 +224,14 @@ public class APISolrj {
                 while (matcher.find()) {
                     field = matcher.group(2);
                     doc.addField("date", field);
+                    tags = true;
                 }
                 line = line.replaceAll("<Date>", "");
                 line = line.replaceAll("</Date>", "");
+
+                if (!tags) {
+                    notags++;
+                }
 
                 //Campos básicos
                 pattern = Pattern.compile("(\\.I) ([0-9]*)");
@@ -262,6 +272,7 @@ public class APISolrj {
                 doc.clear();
 
             }
+            System.out.println("\n" + notags + " documentos sin anotaciones de ANNIE.");
         } catch (FileNotFoundException ex) {
         } catch (SolrServerException ex) {
         } catch (IOException e) {
@@ -274,7 +285,7 @@ public class APISolrj {
      * @param output
      * @return
      */
-    public static String parsearAnnie(String filename, String output) {
+    public static String parsearANNIE(String filename, String output) {
 
         try {
 
@@ -541,7 +552,7 @@ public class APISolrj {
             }
             writer.close();
 
-            filename = parsearAnnie(qry.getName(), output);
+            filename = parsearANNIE(qry.getName(), output);
             //filename = output + ".xml";
 
             Queue<String> docs = new LinkedList<>();
@@ -560,7 +571,7 @@ public class APISolrj {
                     tokens = line.split("\\s+");
                     if (".I".equals(tokens[0]) && count != 0) {
                         docs.add(total);
-                        System.out.println(total);
+                        //System.out.println(total);
                         total = line;
                         count = 0;
                     } else {
@@ -750,28 +761,38 @@ public class APISolrj {
         SolrDocumentList[] list = new SolrDocumentList[qlist.size() + 1];
         String line;
         Query q;
-        int numquery, numempty;
+        int numquery, numempty, notags;
         numquery = 0;
         numempty = 0;
+        notags = 0;
         String total;
+        boolean tags;
         //System.out.println("\nResultados de las consultas en " + collection + ":");
         try {
             while (!qlist.isEmpty()) {
                 numquery++;
+                tags = false;
                 q = qlist.remove();
                 System.out.println("\nConsulta: " + numquery);
                 total = "text:" + q.getText();
                 if (!q.getDate().equals("")) {
                     total = total + " OR date:" + q.getDate();
+                    tags = true;
                 }
                 if (!q.getLocation().equals("")) {
                     total = total + " OR location:" + q.getLocation();
+                    tags = true;
                 }
                 if (!q.getOrg().equals("")) {
                     total = total + " OR org:" + q.getOrg();
+                    tags = true;
                 }
                 if (!q.getPerson().equals("")) {
                     total = total + " OR person:" + q.getPerson();
+                    tags = true;
+                }
+                if (!tags) {
+                    notags++;
                 }
                 System.out.println(total);
                 query.setQuery(total);
@@ -784,7 +805,7 @@ public class APISolrj {
                     numempty++;
                 }
                 for (int i = 0; i < docs.size(); ++i) {
-                    System.out.println(docs.get(i));
+                    //System.out.println(docs.get(i));
                 }
             }
         } catch (SolrServerException ex) {
@@ -794,6 +815,7 @@ public class APISolrj {
         }
         System.out.println("\n" + numquery + " consultas en " + collection + " realizadas.");
         System.out.println("\n" + numempty + " consultas sin resultados.");
+        System.out.println("\n" + notags + " consultas sin anotaciones de ANNIE.");
         return list;
     }
 

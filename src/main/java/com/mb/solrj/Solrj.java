@@ -17,8 +17,8 @@ import org.apache.solr.common.SolrDocumentList;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.*;
-import static com.mb.solrj.APISolrj.parsearAnnie;
 import static com.mb.solrj.APISolrj.parsearQRYGATE;
+import static com.mb.solrj.APISolrj.parsearANNIE;
 
 /**
  *
@@ -38,11 +38,11 @@ public class Solrj {
         stopwords.add("it no such that");
         consultar(coleccion, stopwords);*/
         
-        borrarTodo(coleccion);
-        indexarCISIGATE(archivo1,coleccion);
+        //borrarTodo(coleccion);
+        //indexarCISIGATE(archivo1,coleccion);
         Queue<Query> consultas = parsearQRYGATE(archivo2,salida);
         lista = consultarGATE(coleccion, consultas);
-        crearTREC(lista);
+        //crearTREC(lista);
 
     }
 }
