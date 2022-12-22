@@ -38,11 +38,11 @@ public class Solrj {
         stopwords.add("it no such that");
         consultar(coleccion, stopwords);*/
         
-        //borrarTodo(coleccion);
-        //indexarCISIGATE(archivo1,coleccion);
+        borrarTodo(coleccion);
+        indexarCISIGATE(archivo1,coleccion);
         Queue<Query> consultas = parsearQRYGATE(archivo2,salida);
         lista = consultarGATE(coleccion, consultas);
-        //crearTREC(lista);
+        crearTREC(lista);
 
     }
 }

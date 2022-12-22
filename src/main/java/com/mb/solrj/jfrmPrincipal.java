@@ -9,6 +9,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Highlighter;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
@@ -119,39 +124,70 @@ public class jfrmPrincipal extends javax.swing.JFrame {
         //solrQuery.addField("id");
         //solrQuery.addField("title");
         //solrQuery.addField("author");
-        String query;
+        String query, words;
         query = jtxtSearchString.getText();
         query = query.replaceAll("[\\+\\-\\&&\\!\\(\\)\\{\\}\\[\\]\\^\"\\~\\*\\?\\:\\/\\'\\.\\,\\:\\;]", "");
         query = query.toLowerCase();
+        words = query;
         query = query.replaceAll("\\s", "||");
         query = "text:" + query;
-        System.out.println("Consulta:\n" + query);
         solrQuery.setQuery(query);
         //solrQuery.setSort("id", ORDER.asc);
         solrQuery.setRows(25);
-        solrQuery.setFields("ndoc", "score");
+        solrQuery.setFields("ndoc", "text", "score");
         // sends search request and gets the response
         QueryResponse response = null;
         jtxaResults.setText(null);
         try {
             response = solrClient.query(solrQuery);
+            jtxaResults.setEditable(false);
+            System.out.println("Consulta:\n" + query);
+            jtxaResults.append("Consulta:\n" + query + "\n");
+            // converts to domain objects and prints to standard output
+            if (response != null) {
+                SolrDocumentList articles = response.getResults();
+                if (!articles.isEmpty()) {
+                    SolrDocument article = articles.remove(0);
+                    System.out.println("Score: " + article.get("score"));
+                    jtxaResults.append("Score: " + article.get("score") + "\n");
+                    System.out.println("Documento " + article.get("ndoc"));
+                    jtxaResults.append("Documento " + article.get("ndoc") + "\n");
+                    String line = (String) article.get("text");
+                    String[] tokens = line.split("\\s+");
+                    line = tokens[0];
+                    for (int i = 1; i < tokens.length; i++) {
+                        line = line + " " + tokens[i];
+                        if (i % 8 == 0 || i == tokens.length - 1) {
+                            System.out.println(line.trim());
+                            jtxaResults.append(line.trim() + "\n");
+                            line = "";
+                        }
+
+                    }
+                    Highlighter highlighter = jtxaResults.getHighlighter();
+                    Highlighter.HighlightPainter painter
+                            = new DefaultHighlighter.DefaultHighlightPainter(Color.green);
+                    Pattern pattern;
+                    Matcher matcher;
+                    String[] highwords = words.split("\\s+");
+                    for (int i = 0; i < highwords.length; i++) {
+                        //pattern = Pattern.compile(highwords[i]);
+                        pattern = Pattern.compile("(.)(" + highwords[i] + ")(.)");
+                        matcher = pattern.matcher(jtxaResults.getText());
+                        while (matcher.find()) {
+                            //highlighter.addHighlight(matcher.start(), matcher.end(), painter);
+                            highlighter.addHighlight(matcher.start(2), matcher.end(2), painter);
+                        }
+                    }
+                }
+            } else {
+                System.out.println("No hay resultados.");
+                jtxaResults.append("No hay resultados.\n");
+            }
         } catch (SolrServerException | IOException e) {
             System.err.printf("Failed to search articles: %s", e.getMessage() + "\n");
             jtxaResults.append("Failed to search articles: " + e.getMessage() + "\n");
-        }
-        // converts to domain objects and prints to standard output
-        if (response != null) {
-            SolrDocumentList articles = response.getResults();
-            jtxaResults.setEditable(false);
-            jtxaResults.append("Consulta:\n" + query + "\n");
-            int res = 1;
-            String result;
-            for (SolrDocument article : articles) {
-                result = String.format("%2s", res).replaceAll("\\s", "0");
-                System.out.println(result + ": " + article.toString());
-                jtxaResults.append(result + ": " + article.toString() + "\n");
-                res++;
-            }
+        } catch (BadLocationException ex) {
         }
     }//GEN-LAST:event_jbtnBuscarActionPerformed
 

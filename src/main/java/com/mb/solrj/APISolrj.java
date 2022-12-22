@@ -245,6 +245,8 @@ public class APISolrj {
                 matcher = pattern.matcher(line);
                 if (matcher.find()) {
                     field = matcher.group(2).trim();
+                    field = field.replaceAll("\\.\\.", "\\.");
+                    field = field.replaceAll("\\..", "");
                     doc.addField("title", field);
                 }
 
@@ -252,6 +254,8 @@ public class APISolrj {
                 matcher = pattern.matcher(line);
                 if (matcher.find()) {
                     field = matcher.group(2).trim();
+                    field = field.replaceAll("\\.\\.", "\\.");
+                    field = field.replaceAll("\\..", "");
                     doc.addField("author", field);
                 }
 
@@ -259,6 +263,8 @@ public class APISolrj {
                 matcher = pattern.matcher(line);
                 if (matcher.find()) {
                     field = matcher.group(2).trim();
+                    field = field.replaceAll("\\.\\.", "\\.");
+                    field = field.replaceAll("\\..", "");
                     doc.addField("text", field);
                 }
 
